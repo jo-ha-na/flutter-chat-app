@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_chat_app/pages/user_detail_page.dart';
+import 'package:flutter_chat_app/utils/secure_storage.dart';
 
 class UserCommunityBoardPage extends StatefulWidget {
   const UserCommunityBoardPage({super.key});
@@ -11,11 +12,23 @@ class UserCommunityBoardPage extends StatefulWidget {
 
 class _UserCommunityBoardPageState extends State<UserCommunityBoardPage> {
   final _pseudoController = TextEditingController();
-  bool _disponible = true;
+  final _descriptionController = TextEditingController();
   final _servicesController = TextEditingController();
-
+  bool _disponible = true;
+  String? _selectedRole;
   bool _isLoading = true;
+  bool _isSaving = false;
 
+  final List<String> roles = ['Explorateur', 'Demandeur', 'Accompagnant'];
+  final List<String> suggestedServices = [
+    'Audit mot de passe',
+    'Configuration antivirus',
+    'Sensibilisation cybersécurité',
+    'Support psychologique',
+    'Détection de phishing',
+    'Défense réseau',
+    'Analyse comportementale',
+  ];
   @override
   void initState() {
     super.initState();
@@ -23,89 +36,208 @@ class _UserCommunityBoardPageState extends State<UserCommunityBoardPage> {
   }
 
   Future<void> _loadData() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    final doc =
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid)
-            .get();
-    final data = doc.data();
-    if (data != null) {
-      _pseudoController.text = data['pseudo'] ?? '';
-      _disponible = data['disponible'] ?? true;
-      _servicesController.text = (data['services'] ?? []).join(', ');
+    final userId = await SecureStorage().getUserId();
+    if (userId == null) {
+      debugPrint("❌ Aucun ID utilisateur trouvé dans SecureStorage.");
+      setState(() => _isLoading = false);
+      return;
     }
 
-    setState(() => _isLoading = false);
+    final doc =
+        await FirebaseFirestore.instance.collection('users').doc(userId).get();
+    final data = doc.data();
+
+    if (data != null) {
+      debugPrint("✅ Données chargées : $data");
+      setState(() {
+        _pseudoController.text = data['pseudo'] ?? '';
+        _descriptionController.text = data['description'] ?? '';
+        _disponible = data['disponible'] ?? true;
+        _selectedRole = data['role'];
+        _servicesController.text = (data['services'] ?? []).join(', ');
+        _isLoading = false;
+      });
+    } else {
+      debugPrint("⚠️ Aucune donnée trouvée pour cet utilisateur.");
+      setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _save() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    final userId = await SecureStorage().getUserId();
+    if (userId == null) {
+      debugPrint("❌ Impossible d’enregistrer : aucun ID utilisateur.");
+      return;
+    }
 
-    final services =
-        _servicesController.text
-            .split(',')
-            .map((s) => s.trim())
-            .where((s) => s.isNotEmpty)
-            .toList();
+    if (_pseudoController.text.trim().isEmpty ||
+        _selectedRole == null ||
+        _descriptionController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Veuillez remplir tous les champs obligatoires."),
+        ),
+      );
+      return;
+    }
 
-    await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+    setState(() => _isSaving = true);
+
+    final payload = {
       'pseudo': _pseudoController.text.trim(),
+      'description': _descriptionController.text.trim(),
+      'role': _selectedRole,
       'disponible': _disponible,
-      'services': services,
-    }, SetOptions(merge: true));
+      'services':
+          _servicesController.text
+              .split(',')
+              .map((s) => s.trim())
+              .where((s) => s.isNotEmpty)
+              .toList(),
+    };
+
+    debugPrint("📤 Sauvegarde : $payload");
+
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .set(payload, SetOptions(merge: true));
 
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Profil communautaire mis à jour !")),
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Profil mis à jour !")));
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => UserDetailPage(userId: userId)),
       );
+    }
+
+    setState(() => _isSaving = false);
+  }
+
+  void _addSuggestedService(String service) {
+    final existing = _servicesController.text;
+    final allServices =
+        existing.isEmpty
+            ? [service]
+            : existing.split(',').map((s) => s.trim()).toList();
+    if (!allServices.contains(service)) {
+      allServices.add(service);
+      setState(() {
+        _servicesController.text = allServices.join(', ');
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Mon Profil Communautaire")),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF004AAD),
+        title: Row(
+          children: [
+            Image.asset('assets/logo.png', height: 32),
+            const SizedBox(width: 8),
+            const Text(
+              "Mon profil sur le chat",
+              style: TextStyle(color: Colors.white),
+            ),
+          ],
+        ),
+      ),
       body:
           _isLoading
               ? const Center(child: CircularProgressIndicator())
-              : Padding(
+              : SingleChildScrollView(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     TextField(
                       controller: _pseudoController,
-                      decoration: const InputDecoration(labelText: "Pseudo"),
+                      decoration: const InputDecoration(
+                        labelText: "Pseudo",
+                        prefixIcon: Icon(Icons.person),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      "Rôle :",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children:
+                          roles.map((role) {
+                            return ChoiceChip(
+                              label: Text(role),
+                              selected: _selectedRole == role,
+                              selectedColor: Colors.blue.shade100,
+                              onSelected:
+                                  (_) => setState(() => _selectedRole = role),
+                            );
+                          }).toList(),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _descriptionController,
+                      maxLines: 2,
+                      decoration: const InputDecoration(
+                        labelText: "Mini-description",
+                        prefixIcon: Icon(Icons.info_outline),
+                        border: OutlineInputBorder(),
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        const Text("Disponible"),
+                        const Text("Disponible pour discuter"),
                         const Spacer(),
                         Switch(
                           value: _disponible,
                           onChanged: (val) => setState(() => _disponible = val),
+                          activeColor: Colors.green,
                         ),
                       ],
                     ),
                     const SizedBox(height: 12),
+                    const Text(
+                      "Suggestions de services :",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    Wrap(
+                      spacing: 8,
+                      children:
+                          suggestedServices
+                              .map(
+                                (s) => ActionChip(
+                                  label: Text(s),
+                                  onPressed: () => _addSuggestedService(s),
+                                ),
+                              )
+                              .toList(),
+                    ),
+                    const SizedBox(height: 6),
                     TextField(
                       controller: _servicesController,
                       maxLines: 3,
                       decoration: const InputDecoration(
-                        labelText: "Services proposés (optionnel)",
+                        labelText: "Liste de vos services",
                         hintText:
                             "Ex : audit mot de passe, configuration antivirus",
                         border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.miscellaneous_services),
                       ),
                     ),
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
-                      child: ElevatedButton(
+                      child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF004AAD),
                           shape: RoundedRectangleBorder(
@@ -113,8 +245,9 @@ class _UserCommunityBoardPageState extends State<UserCommunityBoardPage> {
                           ),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
-                        onPressed: _save,
-                        child: const Text(
+                        onPressed: _isSaving ? null : _save,
+                        icon: const Icon(Icons.save),
+                        label: const Text(
                           "Enregistrer",
                           style: TextStyle(color: Colors.white),
                         ),

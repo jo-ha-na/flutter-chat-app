@@ -15,6 +15,7 @@ import 'package:flutter_chat_app/pages/user_detail_page.dart';
 import 'package:flutter_chat_app/pages/community_chat_page.dart';
 import 'package:flutter_chat_app/pages/chat_page.dart';
 import 'package:flutter_chat_app/utils/secure_storage.dart';
+import 'package:flutter_chat_app/pages/Chat_history_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -66,6 +67,7 @@ class MyApp extends StatelessWidget {
         '/profilsAD': (context) => const ProfilAttaquantDefenseurPage(),
         '/register': (context) => const RegisterPage(),
         '/userCommunityBoard': (context) => const UserCommunityBoardPage(),
+        '/chatHist': (context) => const ChatHistoryPage(),
         '/communityChat': (context) => const CommunityChatPage(),
       },
 

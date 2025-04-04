@@ -4,23 +4,32 @@ import 'package:flutter_chat_app/pages/user_detail_page.dart';
 class ProfileCardWidget extends StatelessWidget {
   final String userId;
   final Map<String, dynamic> userData;
+  final bool isCurrentUser;
+  final bool showOnlyAvailable;
 
-  const ProfileCardWidget({
+  ProfileCardWidget({
     super.key,
     required this.userId,
     required this.userData,
-  });
+    required this.isCurrentUser,
+    required this.showOnlyAvailable,
+  }) {
+    debugPrint('🧪 Constructor appelé pour $userId');
+  }
 
   @override
   Widget build(BuildContext context) {
     final pseudo = userData['pseudo'] ?? 'Utilisateur';
     final disponible = userData['disponible'] == true;
-    final services = userData['services'] ?? [];
+    final services =
+        List<String>.from(userData['services'] ?? []).take(3).toList();
+    final role = userData['role'] ?? 'Non spécifié';
+    final description = userData['description'] ?? '';
 
     return Card(
-      elevation: 3,
+      elevation: 4,
       margin: const EdgeInsets.symmetric(vertical: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -28,28 +37,45 @@ class ProfileCardWidget extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.person_outline, size: 28),
+                const Icon(
+                  Icons.person_outline,
+                  size: 30,
+                  color: Color(0xFF004AAD),
+                ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    pseudo,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "$pseudo${isCurrentUser ? ' (moi)' : ''}",
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF004AAD),
+                        ),
+                      ),
+                      Text(
+                        "Rôle : $role",
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
+                    horizontal: 10,
+                    vertical: 6,
                   ),
                   decoration: BoxDecoration(
                     color:
                         disponible
                             ? Colors.green.shade100
-                            : Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(8),
+                            : Colors.red.shade100,
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     disponible ? "Disponible" : "Indisponible",
@@ -57,8 +83,8 @@ class ProfileCardWidget extends StatelessWidget {
                       color:
                           disponible
                               ? Colors.green.shade800
-                              : Colors.grey.shade800,
-                      fontWeight: FontWeight.w500,
+                              : Colors.red.shade800,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -71,14 +97,26 @@ class ProfileCardWidget extends StatelessWidget {
                 children: [
                   const Text(
                     "Services proposés :",
-                    style: TextStyle(fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Wrap(
                     spacing: 8,
-                    children: List<Widget>.from(
-                      services.map((s) => Chip(label: Text(s))),
-                    ),
+                    children:
+                        services
+                            .map(
+                              (s) => Chip(
+                                label: Text(s),
+                                backgroundColor: Colors.blue.shade100,
+                                labelStyle: const TextStyle(
+                                  color: Colors.black,
+                                ),
+                              ),
+                            )
+                            .toList(),
                   ),
                 ],
               ),
@@ -96,11 +134,18 @@ class ProfileCardWidget extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => UserDetailPage(userId: userId),
+                      builder:
+                          (context) => UserDetailPage(
+                            userId: userId,
+                            userData: userData,
+                          ),
                     ),
                   );
                 },
-                child: const Text("Voir profil"),
+                child: const Text(
+                  "Voir profil",
+                  style: TextStyle(color: Colors.white),
+                ),
               ),
             ),
           ],

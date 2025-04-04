@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_chat_app/utils/secure_storage.dart';
+import 'package:intl/intl.dart';
 
 class ChatPage extends StatefulWidget {
   final String targetUserId;
@@ -13,22 +14,32 @@ class ChatPage extends StatefulWidget {
 
 class _ChatPageState extends State<ChatPage> {
   final TextEditingController _messageController = TextEditingController();
-  final currentUser = FirebaseAuth.instance.currentUser;
-  late final String chatId;
+  String? currentUserId;
+  late String chatId;
   String targetUserPseudo = "";
   bool targetUserOnline = false;
 
   @override
   void initState() {
     super.initState();
-    chatId = _getChatId(currentUser!.uid, widget.targetUserId);
+    _initChat();
+  }
+
+  Future<void> _initChat() async {
+    currentUserId = await SecureStorage().getUserId();
+    if (currentUserId == null) {
+      debugPrint("❌ Aucune session utilisateur trouvée");
+      return;
+    }
+
+    chatId = _getChatId(currentUserId!, widget.targetUserId);
+    debugPrint("✅ Chat ID généré: $chatId");
     _fetchTargetUserData();
+    setState(() {});
   }
 
   String _getChatId(String userA, String userB) {
-    return (userA.hashCode <= userB.hashCode)
-        ? "${userA}_$userB"
-        : "${userB}_$userA";
+    return (userA.compareTo(userB) < 0) ? "${userA}_$userB" : "${userB}_$userA";
   }
 
   Future<void> _fetchTargetUserData() async {
@@ -38,48 +49,87 @@ class _ChatPageState extends State<ChatPage> {
             .doc(widget.targetUserId)
             .get();
     if (doc.exists) {
-      setState(() {
-        targetUserPseudo = doc['pseudo'] ?? "Utilisateur";
-        targetUserOnline = doc['isOnline'] ?? false;
-      });
+      final data = doc.data();
+      if (data != null) {
+        debugPrint("✅ Document data: $data");
+        setState(() {
+          targetUserPseudo = data['pseudo'] ?? "Utilisateur";
+          targetUserOnline =
+              data.containsKey('isOnline') ? data['isOnline'] : false;
+        });
+        debugPrint(
+          "✅ Données utilisateur récupérées: $targetUserPseudo, online: $targetUserOnline",
+        );
+      }
+    } else {
+      debugPrint("❌ Utilisateur cible introuvable dans Firestore");
     }
   }
 
   void _sendMessage() async {
     final text = _messageController.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || currentUserId == null) return;
 
-    await FirebaseFirestore.instance
-        .collection('chats')
-        .doc(chatId)
-        .collection('messages')
-        .add({
-          'senderId': currentUser!.uid,
-          'receiverId': widget.targetUserId,
-          'text': text,
-          'timestamp': FieldValue.serverTimestamp(),
-        });
+    try {
+      // 🔧 On s'assure que le document du chat existe
+      await FirebaseFirestore.instance.collection('chats').doc(chatId).set({
+        'users': [currentUserId, widget.targetUserId],
+        'lastUpdated': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
 
-    _messageController.clear();
+      // 📩 On ajoute le message
+      await FirebaseFirestore.instance
+          .collection('chats')
+          .doc(chatId)
+          .collection('messages')
+          .add({
+            'senderId': currentUserId,
+            'receiverId': widget.targetUserId,
+            'text': text,
+            'timestamp': FieldValue.serverTimestamp(),
+          });
+
+      debugPrint("📩 Message envoyé: $text");
+      _messageController.clear();
+    } catch (e) {
+      debugPrint("❌ Erreur d'envoi de message: $e");
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (currentUserId == null) {
+      return const Scaffold(
+        body: Center(child: Text("Chargement de la session...")),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        backgroundColor: const Color(0xFF004AAD),
+        title: Row(
           children: [
-            Text(
-              targetUserPseudo,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            Text(
-              targetUserOnline ? "En ligne" : "Hors ligne",
-              style: TextStyle(
-                fontSize: 12,
-                color: targetUserOnline ? Colors.green : Colors.grey,
-              ),
+            const Icon(Icons.person, color: Colors.white),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  targetUserPseudo,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                Text(
+                  targetUserOnline ? "En ligne" : "Hors ligne",
+                  style: TextStyle(
+                    fontSize: 12,
+                    color:
+                        targetUserOnline ? Colors.green[100] : Colors.white70,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -96,18 +146,21 @@ class _ChatPageState extends State<ChatPage> {
                       .orderBy('timestamp', descending: true)
                       .snapshots(),
               builder: (context, snapshot) {
-                if (!snapshot.hasData) {
+                if (!snapshot.hasData)
                   return const Center(child: CircularProgressIndicator());
-                }
 
                 final messages = snapshot.data!.docs;
+                debugPrint("📨 ${messages.length} messages chargés");
 
                 return ListView.builder(
                   reverse: true,
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final msg = messages[index];
-                    final isMe = msg['senderId'] == currentUser!.uid;
+                    final isMe = msg['senderId'] == currentUserId;
+                    final time = (msg['timestamp'] as Timestamp?)?.toDate();
+                    final timeFormatted =
+                        time != null ? DateFormat.Hm().format(time) : '';
 
                     return Align(
                       alignment:
@@ -125,7 +178,23 @@ class _ChatPageState extends State<ChatPage> {
                                   : Colors.grey.shade300,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Text(msg['text']),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              msg['text'],
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              timeFormatted,
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Colors.black54,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   },
