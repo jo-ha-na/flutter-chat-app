@@ -17,6 +17,7 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
   bool _isLoading = true;
   bool showOnlyAvailable = true;
   String? _currentUserId;
+  bool _isPremium = false;
 
   @override
   void initState() {
@@ -62,6 +63,7 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
       setState(() {
         _hasFilledProfile = true;
         _isLoading = false;
+        _isPremium = data['premium'] == true;
       });
     } else {
       debugPrint("⚠️ Profil incomplet. Affichage du formulaire...");
@@ -193,11 +195,12 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
                                       'role': selectedRole,
                                       'description':
                                           descriptionController.text.trim(),
+                                      'premium': false,
                                     }, SetOptions(merge: true));
                                 if (mounted) {
                                   Navigator.of(context).pop();
                                   debugPrint("✅ Profil enregistré");
-                                  _checkProfile(); // relance pour vérifier et afficher la page
+                                  _checkProfile();
                                 }
                               },
                       child: const Text(
@@ -214,12 +217,10 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      debugPrint("⏳ CommunityChatPage en cours de chargement...");
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     if (!_hasFilledProfile) {
-      debugPrint("⛔️ Profil non rempli, attente validation...");
       return const Scaffold(
         body: Center(child: Text("Chargement du profil...")),
       );
@@ -243,7 +244,25 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
           ),
           IconButton(
             icon: const Icon(Icons.message, color: Colors.white),
-            onPressed: () => Navigator.pushNamed(context, '/chatHist'),
+            onPressed:
+                _isPremium
+                    ? () => Navigator.pushNamed(context, '/chatHist')
+                    : () => showDialog(
+                      context: context,
+                      builder:
+                          (_) => AlertDialog(
+                            title: const Text("Fonctionnalité premium"),
+                            content: const Text(
+                              "Seuls les membres premium peuvent accéder à l'historique des messages.\nContactez l'administrateur sur cyber@Psy.com pour passer premium.",
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text("OK"),
+                              ),
+                            ],
+                          ),
+                    ),
           ),
         ],
       ),

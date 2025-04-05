@@ -18,6 +18,7 @@ class _UserCommunityBoardPageState extends State<UserCommunityBoardPage> {
   String? _selectedRole;
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _isPremium = false;
 
   final List<String> roles = ['Explorateur', 'Demandeur', 'Accompagnant'];
   final List<String> suggestedServices = [
@@ -29,14 +30,16 @@ class _UserCommunityBoardPageState extends State<UserCommunityBoardPage> {
     'Défense réseau',
     'Analyse comportementale',
   ];
+
   @override
   void initState() {
     super.initState();
-    _loadData();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadData());
   }
 
   Future<void> _loadData() async {
     final userId = await SecureStorage().getUserId();
+    if (!mounted) return;
     if (userId == null) {
       debugPrint("❌ Aucun ID utilisateur trouvé dans SecureStorage.");
       setState(() => _isLoading = false);
@@ -47,6 +50,7 @@ class _UserCommunityBoardPageState extends State<UserCommunityBoardPage> {
         await FirebaseFirestore.instance.collection('users').doc(userId).get();
     final data = doc.data();
 
+    if (!mounted) return;
     if (data != null) {
       debugPrint("✅ Données chargées : $data");
       setState(() {
@@ -55,6 +59,7 @@ class _UserCommunityBoardPageState extends State<UserCommunityBoardPage> {
         _disponible = data['disponible'] ?? true;
         _selectedRole = data['role'];
         _servicesController.text = (data['services'] ?? []).join(', ');
+        _isPremium = data['premium'] ?? false;
         _isLoading = false;
       });
     } else {
@@ -87,6 +92,7 @@ class _UserCommunityBoardPageState extends State<UserCommunityBoardPage> {
       'pseudo': _pseudoController.text.trim(),
       'description': _descriptionController.text.trim(),
       'role': _selectedRole,
+      'premium': _isPremium,
       'disponible': _disponible,
       'services':
           _servicesController.text
@@ -103,28 +109,24 @@ class _UserCommunityBoardPageState extends State<UserCommunityBoardPage> {
         .doc(userId)
         .set(payload, SetOptions(merge: true));
 
-    if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Profil mis à jour !")));
+    if (!mounted) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text("Profil mis à jour !")));
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => UserDetailPage(userId: userId)),
-      );
-    }
+    Navigator.pushReplacementNamed(context, '/communityChat');
 
     setState(() => _isSaving = false);
   }
 
   void _addSuggestedService(String service) {
-    final existing = _servicesController.text;
-    final allServices =
-        existing.isEmpty
-            ? [service]
-            : existing.split(',').map((s) => s.trim()).toList();
-    if (!allServices.contains(service)) {
-      allServices.add(service);
+    final existing = _servicesController.text.trim();
+    final Set<String> allServices =
+        existing.isNotEmpty
+            ? existing.split(',').map((s) => s.trim()).toSet()
+            : <String>{};
+
+    if (allServices.add(service)) {
       setState(() {
         _servicesController.text = allServices.join(', ');
       });
@@ -205,6 +207,17 @@ class _UserCommunityBoardPageState extends State<UserCommunityBoardPage> {
                         ),
                       ],
                     ),
+                    Row(
+                      children: [
+                        const Text("Profil premium "),
+                        const Spacer(),
+                        Switch(
+                          value: _isPremium,
+                          onChanged: (val) => setState(() => _isPremium = val),
+                          activeColor: Colors.amber,
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 12),
                     const Text(
                       "Suggestions de services :",
@@ -213,14 +226,12 @@ class _UserCommunityBoardPageState extends State<UserCommunityBoardPage> {
                     Wrap(
                       spacing: 8,
                       children:
-                          suggestedServices
-                              .map(
-                                (s) => ActionChip(
-                                  label: Text(s),
-                                  onPressed: () => _addSuggestedService(s),
-                                ),
-                              )
-                              .toList(),
+                          suggestedServices.map((s) {
+                            return ActionChip(
+                              label: Text(s),
+                              onPressed: () => _addSuggestedService(s),
+                            );
+                          }).toList(),
                     ),
                     const SizedBox(height: 6),
                     TextField(

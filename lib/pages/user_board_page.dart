@@ -27,7 +27,7 @@ class _UserBoardPageState extends State<UserBoardPage> {
         isLoading = false;
       });
     } catch (e) {
-      print("❌ Erreur récupération user: $e");
+      debugPrint("❌ Erreur récupération user: $e");
       setState(() => isLoading = false);
     }
   }
@@ -35,51 +35,79 @@ class _UserBoardPageState extends State<UserBoardPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Mon tableau de bord")),
+      backgroundColor: Colors.grey.shade100,
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF004AAD),
+        title: Row(
+          children: [
+            Image.asset('assets/logo.png', height: 32),
+            const SizedBox(width: 8),
+            const Text(
+              "Mon tableau de bord",
+              style: TextStyle(color: Colors.white),
+            ),
+          ],
+        ),
+      ),
       body:
           isLoading
               ? const Center(child: CircularProgressIndicator())
               : utilisateur == null
               ? const Center(child: Text("Utilisateur non trouvé."))
-              : Padding(
+              : SingleChildScrollView(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       "Bienvenue ${utilisateur!.prenom} ${utilisateur!.nom} !",
                       style: const TextStyle(
-                        fontSize: 20,
+                        fontSize: 24,
                         fontWeight: FontWeight.bold,
+                        color: Color(0xFF004AAD),
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    Card(
-                      child: ListTile(
-                        title: const Text("Email"),
-                        subtitle: Text(utilisateur!.email),
-                      ),
+                    const SizedBox(height: 24),
+                    _buildInfoCard(
+                      icon: Icons.email,
+                      label: "Email",
+                      value: utilisateur!.email,
                     ),
-                    Card(
-                      child: ListTile(
-                        title: const Text("Dernière activité"),
-                        subtitle: Text(utilisateur!.derniereActivite ?? 'N/A'),
-                      ),
+                    _buildInfoCard(
+                      icon: Icons.access_time,
+                      label: "Dernière activité",
+                      value: utilisateur!.derniereActivite ?? 'Non disponible',
                     ),
-                    Card(
-                      child: ListTile(
-                        title: const Text("Rôle"),
-                        subtitle: Text(utilisateur!.role ?? 'Utilisateur'),
-                      ),
+                    _buildInfoCard(
+                      icon: Icons.security,
+                      label: "Rôle",
+                      value: utilisateur!.role,
                     ),
-                    Card(
-                      child: ListTile(
-                        title: const Text("Niveau de sensibilisation"),
-                        subtitle: Text("Choisissez-le depuis la page Analyse"),
-                      ),
+                    _buildInfoCard(
+                      icon: Icons.bar_chart,
+                      label: "Niveau de sensibilisation",
+                      value: "À définir dans l'analyse",
                     ),
                   ],
                 ),
               ),
+    );
+  }
+
+  Widget _buildInfoCard({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      margin: const EdgeInsets.only(bottom: 16),
+      child: ListTile(
+        leading: Icon(icon, color: const Color(0xFF004AAD)),
+        title: Text(label),
+        subtitle: Text(value),
+      ),
     );
   }
 }

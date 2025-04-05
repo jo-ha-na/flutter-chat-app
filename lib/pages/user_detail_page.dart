@@ -44,11 +44,22 @@ class UserDetailPage extends StatelessWidget {
                     );
                   }
                   final data = snapshot.data!.data() as Map<String, dynamic>;
-
                   return _buildContent(context, data);
                 },
               ),
     );
+  }
+
+  Future<bool> _isCurrentUserPremium() async {
+    final currentUserId = await SecureStorage().getUserId();
+    if (currentUserId == null) return false;
+
+    final snapshot =
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(currentUserId)
+            .get();
+    return snapshot.data()?['premium'] == true;
   }
 
   Widget _buildContent(BuildContext context, Map<String, dynamic> data) {
@@ -67,9 +78,6 @@ class UserDetailPage extends StatelessWidget {
 
         final currentUserId = snapshot.data;
         final isCurrentUser = currentUserId != null && currentUserId == userId;
-        debugPrint(
-          "🔎 Comparaison userId : currentUser=$currentUserId, affiché=$userId, résultat=$isCurrentUser",
-        );
 
         return Padding(
           padding: const EdgeInsets.all(24.0),
@@ -159,10 +167,36 @@ class UserDetailPage extends StatelessWidget {
                         ? "Modifier mon profil"
                         : "Envoyer un message",
                   ),
-                  onPressed: () {
+                  onPressed: () async {
                     if (isCurrentUser) {
                       Navigator.pushNamed(context, '/userCommunityBoard');
                     } else {
+                      final senderId = await SecureStorage().getUserId();
+                      final senderDoc =
+                          await FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(senderId)
+                              .get();
+                      final isPremium = senderDoc.data()?['premium'] == true;
+                      if (!isPremium) {
+                        showDialog(
+                          context: context,
+                          builder:
+                              (_) => AlertDialog(
+                                title: const Text("Fonctionnalité réservée"),
+                                content: const Text(
+                                  "Seuls les membres premium peuvent envoyer un message.\nContactez l'administrateur.",
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text("OK"),
+                                  ),
+                                ],
+                              ),
+                        );
+                        return;
+                      }
                       Navigator.pushNamed(context, '/chat', arguments: userId);
                     }
                   },

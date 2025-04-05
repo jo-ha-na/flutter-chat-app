@@ -169,6 +169,7 @@ class _ProfilAttaquantDefenseurPageState
 
   Future<void> _loadUser() async {
     final user = await ApiService.getCurrentUser();
+    if (!mounted) return;
     setState(() {
       utilisateur = user;
     });
