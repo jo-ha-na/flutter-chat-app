@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_chat_app/widgets/custom_app_bar.dart';
+import 'package:flutter_chat_app/models/utilisateur.dart';
+import 'package:flutter_chat_app/services/api_service.dart';
 
 class ProfilAttaquantDefenseurPage extends StatefulWidget {
   const ProfilAttaquantDefenseurPage({super.key});
@@ -158,6 +160,20 @@ class _ProfilAttaquantDefenseurPageState
     },
   ];
 
+  Utilisateur? utilisateur;
+  @override
+  void initState() {
+    super.initState();
+    _loadUser();
+  }
+
+  Future<void> _loadUser() async {
+    final user = await ApiService.getCurrentUser();
+    setState(() {
+      utilisateur = user;
+    });
+  }
+
   void _showProfilDetails(Map<String, String> profil) {
     showDialog(
       context: context,
@@ -199,7 +215,12 @@ class _ProfilAttaquantDefenseurPageState
     final profils = showAttaquants ? profilsAttaquants : profilsDefenseurs;
 
     return Scaffold(
-      appBar: CustomAppBar(title: "Profils ", onLogout: () {}, userName: ''),
+      appBar: CustomAppBar(
+        title: "Profils ",
+        onLogout: () {},
+        userName: utilisateur != null ? "${utilisateur!.prenom} " : null,
+        showUserMenu: true,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(

@@ -44,7 +44,15 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     return AppBar(
-      title: Text(title),
+      backgroundColor: const Color(0xFF004AAD),
+      title: Text(
+        title,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
       actions: [
         if (showUserMenu && userName != null)
           PopupMenuButton<String>(
@@ -82,12 +90,13 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
             child: Center(child: Text("👋 $userName")),
           ),
         IconButton(
-          icon: const Icon(Icons.settings),
+          icon: const Icon(Icons.settings, color: Colors.white),
           onPressed: () => _openSettings(context),
           tooltip: "Paramètres",
         ),
+
         IconButton(
-          icon: const Icon(Icons.logout),
+          icon: const Icon(Icons.logout, color: Colors.white),
           onPressed: onLogout,
           tooltip: "Se déconnecter",
         ),

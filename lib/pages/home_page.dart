@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_chat_app/widgets/custom_app_bar.dart';
 import 'package:flutter_chat_app/services/api_service.dart';
 import 'package:flutter_chat_app/models/utilisateur.dart';
+import 'dart:developer';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -21,6 +22,8 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _loadUser() async {
     final user = await ApiService.getCurrentUser();
+    log("🧪 Utilisateur depuis /auth/me : ${user?.prenom} ${user?.nom}");
+
     setState(() {
       utilisateur = user;
     });
