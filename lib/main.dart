@@ -14,8 +14,8 @@ import 'package:flutter_chat_app/pages/user_community_board.dart';
 import 'package:flutter_chat_app/pages/user_detail_page.dart';
 import 'package:flutter_chat_app/pages/community_chat_page.dart';
 import 'package:flutter_chat_app/pages/chat_page.dart';
+import 'package:flutter_chat_app/pages/chat_history_page.dart';
 import 'package:flutter_chat_app/utils/secure_storage.dart';
-import 'package:flutter_chat_app/pages/Chat_history_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,22 +39,10 @@ class MyApp extends StatelessWidget {
       ),
       debugShowCheckedModeBanner: false,
 
-      // ✅ Page de démarrage
-      home: FutureBuilder<String?>(
-        future: _secureStorage.getToken(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
+      // ✅ Page de démarrage avec vérification du token + userId
+      home: const InitPage(),
 
-          final token = snapshot.data;
-          return token != null ? HomePage() : const LoginPage();
-        },
-      ),
-
-      // ✅ Routes simples (sans paramètres)
+      // ✅ Routes simples
       routes: {
         '/home': (context) => HomePage(),
         '/analyse': (context) => AnalysePage(),
@@ -71,7 +59,7 @@ class MyApp extends StatelessWidget {
         '/communityChat': (context) => const CommunityChatPage(),
       },
 
-      // ✅ Routes avec paramètres dynamiques
+      // ✅ Routes dynamiques avec arguments
       onGenerateRoute: (settings) {
         if (settings.name == '/chat') {
           final targetUserId = settings.arguments as String;
@@ -91,5 +79,41 @@ class MyApp extends StatelessWidget {
         return null;
       },
     );
+  }
+}
+
+class InitPage extends StatefulWidget {
+  const InitPage({super.key});
+
+  @override
+  State<InitPage> createState() => _InitPageState();
+}
+
+class _InitPageState extends State<InitPage> {
+  final SecureStorage _secureStorage = SecureStorage();
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuth();
+  }
+
+  void _checkAuth() async {
+    final token = await _secureStorage.getToken();
+    final userId = await _secureStorage.getUserId();
+    debugPrint("🔐 Vérification token: $token / userId: $userId");
+
+    if (!mounted) return;
+
+    if (token != null && userId != null) {
+      Navigator.pushReplacementNamed(context, '/home');
+    } else {
+      Navigator.pushReplacementNamed(context, '/login');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }

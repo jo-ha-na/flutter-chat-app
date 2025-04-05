@@ -30,7 +30,7 @@ class _AnalysePageState extends State<AnalysePage> {
   }
 
   void _logout() async {
-    await ApiService.logout();
+    await SecureStorage().clearAll(); // ou deleteToken + deleteUserId
     Navigator.pushReplacementNamed(context, '/login');
   }
 

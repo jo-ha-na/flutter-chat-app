@@ -27,8 +27,30 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _logout() async {
-    await ApiService.logout();
-    Navigator.pushReplacementNamed(context, '/login');
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text("Déconnexion"),
+            content: const Text("Souhaitez-vous vous déconnecter ?"),
+            actions: [
+              TextButton(
+                child: const Text("Annuler"),
+                onPressed: () => Navigator.pop(context, false),
+              ),
+              TextButton(
+                child: const Text("Se déconnecter"),
+                onPressed: () => Navigator.pop(context, true),
+              ),
+            ],
+          ),
+    );
+
+    if (confirm == true) {
+      await ApiService.logout();
+      // 🔁 On vide tout l'historique et on va vers login
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+    }
   }
 
   Widget buildActionTile({

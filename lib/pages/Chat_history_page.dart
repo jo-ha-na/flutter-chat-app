@@ -45,12 +45,16 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF004AAD),
-        title: const Text(
-          "Mes messages",
-          style: TextStyle(color: Colors.white),
+        title: Row(
+          children: [
+            Image.asset('assets/logo.png', height: 32),
+            const SizedBox(width: 8),
+            const Text("Mes messages", style: TextStyle(color: Colors.white)),
+          ],
         ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
+
       body: Column(
         children: [
           Padding(
@@ -140,6 +144,8 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
                                   'dd/MM/yyyy HH:mm',
                                 ).format(timestamp.toDate())
                                 : '';
+                        final isUnread =
+                            lastMessage['receiverId'] == currentUserId;
 
                         return FutureBuilder<DocumentSnapshot>(
                           future:
@@ -161,10 +167,15 @@ class _ChatHistoryPageState extends State<ChatHistoryPage> {
                             if (!pseudo.toLowerCase().contains(_searchQuery)) {
                               return const SizedBox.shrink();
                             }
+                            bool isUnread =
+                                lastMessage['receiverId'] == currentUserId;
 
                             return ListTile(
                               leading: CircleAvatar(
-                                backgroundColor: Colors.blue.shade100,
+                                backgroundColor:
+                                    isUnread
+                                        ? Colors.amber.shade200
+                                        : Colors.blue.shade100,
                                 child: Text(
                                   pseudo.substring(0, 1).toUpperCase(),
                                   style: const TextStyle(color: Colors.black),

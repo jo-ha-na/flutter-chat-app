@@ -111,6 +111,7 @@ class _ChatPageState extends State<ChatPage> {
           children: [
             const Icon(Icons.person, color: Colors.white),
             const SizedBox(width: 8),
+
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -131,6 +132,7 @@ class _ChatPageState extends State<ChatPage> {
                 ),
               ],
             ),
+            Image.asset('assets/logo.png', height: 32),
           ],
         ),
       ),

@@ -47,6 +47,7 @@ class _RegisterPageState extends State<RegisterPage> {
       setState(() => message = "❌ Email déjà utilisé");
     } else {
       setState(() => message = "❌ Erreur : ${response.body}");
+      debugPrint('❌ Code: ${response.statusCode}, Body: ${response.body}');
     }
   }
 

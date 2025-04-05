@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_chat_app/widgets/simulation_tabs.dart';
 import 'package:flutter_chat_app/widgets/custom_app_bar.dart';
 import 'package:flutter_chat_app/services/api_service.dart';
+import 'package:flutter_chat_app/utils/secure_storage.dart';
 
 class SimulationPage extends StatefulWidget {
   const SimulationPage({super.key});
@@ -12,7 +13,7 @@ class SimulationPage extends StatefulWidget {
 
 class _SimulationPageState extends State<SimulationPage> {
   void _logout() async {
-    await ApiService.logout();
+    await SecureStorage().clearAll(); // ou deleteToken + deleteUserId
     Navigator.pushReplacementNamed(context, '/login');
   }
 
