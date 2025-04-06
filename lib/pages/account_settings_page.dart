@@ -1,7 +1,6 @@
-// ✅ lib/pages/account_settings_page.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_chat_app/services/api_service.dart';
+import 'package:flutter_chat_app/pages/privacy_policy_page.dart';
 
 class AccountSettingsPage extends StatefulWidget {
   final int userId;
@@ -64,6 +63,18 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
               _message,
               style: TextStyle(
                 color: _message.startsWith('✅') ? Colors.green : Colors.red,
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PrivacyPolicyPage()),
+                );
+              },
+              child: const Text(
+                "Voir la politique de confidentialité",
+                style: TextStyle(color: Colors.blue),
               ),
             ),
           ],

@@ -184,7 +184,16 @@ class _QcmPageState extends State<QcmPage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text("QCM")),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF004AAD),
+        title: Row(
+          children: [
+            Image.asset('assets/logo.png', height: 32),
+            const SizedBox(width: 5),
+            const Text('QCM', style: TextStyle(color: Colors.white)),
+          ],
+        ),
+      ),
       body: _isSubmitted ? _buildResultView() : _buildQuestionView(),
     );
   }
